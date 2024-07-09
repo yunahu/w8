@@ -6,6 +6,12 @@ import path from "path";
 import cookieParser from "cookie-parser";
 import logger from "morgan";
 import indexRouter from "./routes/index.js";
+import authRouter from "./routes/auth.js";
+import { connectToMongo } from "./services/mongo.js";
+import session from "express-session";
+import RedisStore from "connect-redis";
+import redisClient from "./services/redis.js";
+import passport from "passport";
 
 // Constants
 const port = process.env.PORT || 3000;
@@ -23,7 +29,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join("public")));
 
+app.use(
+  session({
+    secret: "keyboard cat",
+    resave: false, // don't save session if unmodified
+    saveUninitialized: false, // don't create session until something stored
+    store: new RedisStore({ client: redisClient }),
+  })
+);
+
+app.use(passport.authenticate("session"));
+
 app.use("/", indexRouter);
+app.use("/", authRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -42,6 +60,10 @@ app.use(function (err, req, res, next) {
 });
 
 // Start http server
-app.listen(port, () => {
-  console.log(`Server started at http://localhost:${port}`);
+connectToMongo().then(async () => {
+  await redisClient.connect();
+
+  app.listen(port, async () => {
+    console.log(`Server started at http://localhost:${port}`);
+  });
 });

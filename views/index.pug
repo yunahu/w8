@@ -1,4 +1,9 @@
 extends layout
 
 block content
-  h1= title
+	h1 Yay node!
+	p Hello #{user ? user.name : "Anonymous"}
+	if user
+		a(href='/logout') Logout
+	else
+		a(href='/login/federated/google') Login
